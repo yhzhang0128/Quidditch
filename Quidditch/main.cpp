@@ -3,6 +3,7 @@
 #include "Vertex3D.h"
 
 #include <GL\glut.h>
+#include "Texture.hpp"
 
 namespace ClothSimulation{
 
@@ -18,7 +19,7 @@ namespace ClothSimulation{
 		float mass;
 		Vertex3D currentPosition, previousPosition;  // µ±Ç°Î»ÖÃ£¬ ÉÏÒ»Ö¡Î»ÖÃ
 		Vertex3D normal, acceleration;
-
+		Vertex3D texturePosition;
 	public:
 		Particle()	{}
 		Particle(const Vertex3D &pos, float m) :
@@ -32,7 +33,6 @@ namespace ClothSimulation{
 
 		void stepMove(){
 			if (!fixed) {
-				//printf("move!\n");
 				Vertex3D tmp(currentPosition);
 				currentPosition = currentPosition + (currentPosition - previousPosition) * (1.0 - DAMPING) + acceleration * STEP_TIMESQUARE;
 				previousPosition = tmp;
@@ -47,6 +47,9 @@ namespace ClothSimulation{
 		void setFixed()	{ fixed = true; }
 		void setNormal(Vertex3D norm)	{ normal = norm; }
 		inline Vertex3D& getNormal()	{ return normal; }
+
+		Vertex3D getTexturePosition()	{ return texturePosition; }
+		void setTexturePosition(float x, float y)	{ texturePosition.x = x; texturePosition.y = y; }
 	};
 
 	class Constraint{
@@ -72,6 +75,7 @@ namespace ClothSimulation{
 
 	class Cloth{
 	private:
+		int pixmap_id, texture_id;
 		int width_granularity, height_granularity;
 		std::vector<Particle> particles;
 		std::vector<Constraint> constraints;
@@ -95,18 +99,27 @@ namespace ClothSimulation{
 			p3->addForce(force);
 		}
 
-		void drawTriangle(Particle *p1, Particle *p2, Particle *p3, const Vertex3D color)
+		void drawTriangle(Particle *p1, Particle *p2, Particle *p3)
 		{
-			glColor3fv((GLfloat*)&color);
+			glColor3f(0.5, 0.5, 0.5);
 
-			glNormal3fv((GLfloat *)&(p1->getNormal().normalize()));
-			glVertex3fv((GLfloat *)&(p1->getCurrentPosition()));
+			float relativeW = Texture::smallPixmaps[pixmap_id].relativeW;
+			float relativeH = Texture::smallPixmaps[pixmap_id].relativeH;
 
-			glNormal3fv((GLfloat *)&(p2->getNormal().normalize()));
-			glVertex3fv((GLfloat *)&(p2->getCurrentPosition()));
+			glTexCoord2f(relativeW * p1->getTexturePosition().x,
+						 relativeH * p1->getTexturePosition().y);
+			glNormal3f(p1->getNormal().normalize().x, p1->getNormal().normalize().y, p1->getNormal().normalize().z);
+			glVertex3f(p1->getCurrentPosition().x, p1->getCurrentPosition().y, p1->getCurrentPosition().z);
 
-			glNormal3fv((GLfloat *)&(p3->getNormal().normalize()));
-			glVertex3fv((GLfloat *)&(p3->getCurrentPosition()));
+			glTexCoord2f(relativeW * p2->getTexturePosition().x,
+				relativeH * p2->getTexturePosition().y);
+			glNormal3f(p2->getNormal().normalize().x, p2->getNormal().normalize().y, p2->getNormal().normalize().z);
+			glVertex3f(p2->getCurrentPosition().x, p2->getCurrentPosition().y, p2->getCurrentPosition().z);
+
+			glTexCoord2f(relativeW * p3->getTexturePosition().x,
+				relativeH * p3->getTexturePosition().y);
+			glNormal3f(p3->getNormal().normalize().x, p3->getNormal().normalize().y, p3->getNormal().normalize().z);
+			glVertex3f(p3->getCurrentPosition().x, p3->getCurrentPosition().y, p3->getCurrentPosition().z);
 		}
 
 		void bindAdjacentConstraints(){
@@ -135,25 +148,58 @@ namespace ClothSimulation{
 				}
 			}
 		}
+
+		void renderStart(){
+			glShadeModel(GL_SMOOTH);
+			glEnable(GL_LIGHTING);
+			glEnable(GL_LIGHT1);
+
+			GLfloat lightAmbient1[4] = { 0.7, 0.7, 0.7, 0.0 };
+			GLfloat lightPos1[4] = { -1.0, -1.0, 1.0, 0.0 };
+			GLfloat lightDiffuse1[4] = { 0.8, 0.8, 0.8, 0.0 };
+
+			glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
+			glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient1);
+			glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse1);
+
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, lightDiffuse1);
+
+			glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+		}
+
+		void renderEnd(){
+			glDisable(GL_LIGHT1);
+			glDisable(GL_LIGHTING);
+		}
 	public:
-		Cloth(float	width, float height, int width_gran, int height_gran) :
+		Cloth(float	width, float height, int width_gran, int height_gran, int texture, int pixmap) :
+			pixmap_id(pixmap), texture_id(texture),
 			width_granularity(width_gran), height_granularity(height_gran){
 
 			particles.resize(width_granularity * height_granularity);
+			
 			for (int x = 0; x < width_granularity; x++)
 				for (int y = 0; y < height_granularity; y++){
 					// ÔÚYOZÆ½ÃæÉÏ£¬YÖáÕý·½Ïò£¬zÖá¸º·½Ïò
 					Vertex3D pos(height * (y / (float)height_granularity), height * (y / (float)height_granularity), -width * (x / (float)width_granularity));
+					
 					particles[y * width_granularity + x] = Particle(pos, PARTICLE_MASS);
 					if (x == 0)
 						particles[y * width_granularity + x].setFixed();
+
+					// Set Texture
+					particles[y * width_granularity + x].setTexturePosition((float)x / (width_granularity - 1), (float)y / (height_granularity - 1));
 				}
 
 			bindAdjacentConstraints();
+
+
+			bufferNURBS = new GLfloat[width_granularity * height_granularity * 3];
 		}
 
 
 		void drawBallVersion(){
+			renderStart();
 			for (int i = 0; i < particles.size(); i++){
 				Vertex3D pos(particles[i].getCurrentPosition());
 
@@ -163,6 +209,86 @@ namespace ClothSimulation{
 				glutSolidSphere(0.1, 30, 30);
 				glPopMatrix();
 			}
+			renderEnd();
+		}
+
+		/*
+			(x,y)   *--* (x+1,y)
+					| /|
+					|/ |
+			(x,y+1) *--* (x+1,y+1)
+		*/
+		void drawTriangleVersion(){
+			renderStart();
+
+			glEnable(GL_TEXTURE_2D);
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glBindTexture(GL_TEXTURE_2D, Texture::textureNames[texture_id]);
+
+			glBegin(GL_TRIANGLES);
+			for (int x = 0; x < width_granularity - 1; x++){
+				for (int y =0; y < height_granularity - 1; y++){
+					// Count Normal
+					Vertex3D normalTriangle1 = calcTriangleNormal(getParticle(x, y), getParticle(x + 1, y), getParticle(x, y + 1));
+					Vertex3D normalTriangle2 = calcTriangleNormal(getParticle(x + 1, y + 1), getParticle(x, y + 1), getParticle(x + 1, y));
+
+					getParticle(x, y)->setNormal(normalTriangle1);
+					getParticle(x + 1, y)->setNormal(normalTriangle1 + normalTriangle2);
+					getParticle(x, y + 1)->setNormal(normalTriangle1 + normalTriangle2);
+					getParticle(x + 1, y + 1)->setNormal(normalTriangle2);
+
+					// Draw Triangle
+					drawTriangle(getParticle(x + 1, y), getParticle(x, y), getParticle(x, y + 1));
+					drawTriangle(getParticle(x + 1, y + 1), getParticle(x + 1, y), getParticle(x, y + 1));
+				}
+			}
+			glEnd();
+
+
+			glDisable(GL_TEXTURE_2D);
+			renderEnd();
+		}
+
+
+		GLfloat *bufferNURBS;
+		void drawNurbsVersion(){
+			glColor3f(1, 1, 1);
+			for (int i = 0; i < width_granularity; i++)
+				for (int j = 0; j < height_granularity; j++){
+					bufferNURBS[(i * height_granularity + j) * 3 + 0] = getParticle(i, j)->getCurrentPosition().x;
+					bufferNURBS[(i * height_granularity + j) * 3 + 1] = getParticle(i, j)->getCurrentPosition().y;
+					bufferNURBS[(i * height_granularity + j) * 3 + 2] = getParticle(i, j)->getCurrentPosition().z;
+				}
+
+			renderStart();
+
+			glMap2f(GL_MAP2_VERTEX_3, 0, 1, 3, height_granularity,
+				0, 1, 3 * height_granularity, width_granularity, bufferNURBS);
+
+			GLfloat texpts[2][2][2] = { { { 0.0, 0.0 }, { 0.0, Texture::smallPixmaps[pixmap_id].relativeH } },
+			{ { Texture::smallPixmaps[pixmap_id].relativeW, 0.0 }, { Texture::smallPixmaps[pixmap_id].relativeW, Texture::smallPixmaps[pixmap_id].relativeH } } };
+			glMap2f(GL_MAP2_TEXTURE_COORD_2, 0, 1, 2, 2, //
+				0, 1, 4, 2, &texpts[0][0][0]);
+
+			glEnable(GL_MAP2_VERTEX_3);
+			glEnable(GL_MAP2_TEXTURE_COORD_2);
+			glEnable(GL_AUTO_NORMAL);
+			glEnable(GL_NORMALIZE);
+
+			glMapGrid2f(20, 0.0, 1.0, 20, 0.0, 1.0);
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			glBindTexture(GL_TEXTURE_2D, Texture::textureNames[texture_id]);
+
+			glEnable(GL_TEXTURE_2D);
+			glEvalMesh2(GL_FILL, 0, 20, 0, 20);
+
+			glDisable(GL_AUTO_NORMAL);
+			glDisable(GL_NORMALIZE);
+			glDisable(GL_TEXTURE_2D);
+			glDisable(GL_MAP2_VERTEX_3);
+			glDisable(GL_MAP2_TEXTURE_COORD_2);
+
+			renderEnd();
 		}
 
 		void stepMove(){
@@ -194,19 +320,15 @@ namespace ClothSimulation{
 	};
 }
 
-ClothSimulation::Cloth banner(16, 9, 16, 9);
+ClothSimulation::Cloth banner0(16, 9, 16, 9, TEX_BANNER0, PIXMAP_BANNER0);
+ClothSimulation::Cloth banner1(16, 9, 16, 9, TEX_BANNER1, PIXMAP_BANNER1);
 
 void init(){
-	//  ÑÕÉ«½¥±ä
-	glShadeModel(GL_SMOOTH);
-
 	glClearColor(1, 1, 1, 0);
 	glClearDepth(1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
-
-	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-	glEnable(GL_LIGHTING);
+	
 	glEnable(GL_COLOR_MATERIAL);
 	/*
 	glEnable(GL_LIGHT0);
@@ -214,22 +336,11 @@ void init(){
 	glLightfv(GL_LIGHT0, GL_POSITION, (GLfloat *)&lightPos);
 	*/
 
-	glEnable(GL_LIGHT1);
-
-	GLfloat lightAmbient1[4] = { 0.0, 0.0, 0.0, 0.0 };
-	GLfloat lightPos1[4] = { 1.0, 1.0, 0.0, 0.0 };
-	GLfloat lightDiffuse1[4] = { 0.8, 0.8, 0.8, 0.0 };
-
-	glLightfv(GL_LIGHT1, GL_POSITION, (GLfloat *)&lightPos1);
-	glLightfv(GL_LIGHT1, GL_AMBIENT, (GLfloat *)&lightAmbient1);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, (GLfloat *)&lightDiffuse1);
-
-	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+	Texture::prepareBanner();
 }
 
 void display(){
 	//printf("display\n");
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -237,15 +348,16 @@ void display(){
 	glLoadIdentity();
 
 	gluPerspective(45.0f, (GLfloat)1280 / (GLfloat)720, 0.1f, 5000.0f);
-	gluLookAt(18, 2, 10, 0, 2, -7, 0, 1, 0);
+	gluLookAt(18, 2, 16, 0, 3, -7, 0, 1, 0);
+	//gluLookAt(7, 7, 0, 0, 0, 0, 0, 1, 0);
+	banner0.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
+	banner0.windForce(Vertex3D(-1.0, 0, -2.0) * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
+	banner0.stepMove();
 
-	banner.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
-	//banner.windForce(Vertex3D(-0.4, 0, -0.8) * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
-	banner.stepMove();
+	banner1.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
+	banner1.windForce(Vertex3D(-1.0, 0, -2.0) * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
+	banner1.stepMove();
 
-
-	//gluLookAt(5, 5, 5, 0, 0, 0, 0, 1, 0);
-	//gluLookAt(1, 1, 1, 0, 0, 0, 0, 1, 0);
 	/*
 	glDisable(GL_LIGHTING); // drawing some smooth shaded background - because I like it ;)
 	glBegin(GL_POLYGON);
@@ -272,8 +384,24 @@ void display(){
 	}
 	*/
 	glColor3f(0, 1, 0);
-	banner.drawBallVersion();
+	//banner0.drawBallVersion();
+	//banner0.drawTriangleVersion();
 
+	//banner0.drawNurbsVersion();
+
+	glPushMatrix();
+	glTranslatef(-2, 0, 2);
+	glRotatef(10, 0, -1, 0);
+	banner1.drawNurbsVersion();
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(4.5, 0, -4.5);
+	glRotatef(30, 0, -1, 0);
+	banner0.drawTriangleVersion();
+	//banner1.drawTriangleVersion();
+	glPopMatrix();
+	
 	glutSwapBuffers();
 	glutPostRedisplay();
 }

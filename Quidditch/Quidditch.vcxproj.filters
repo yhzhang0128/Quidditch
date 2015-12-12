@@ -23,5 +23,11 @@
     <ClInclude Include="Vertex3D.h">
       <Filter>源文件</Filter>
     </ClInclude>
+    <ClInclude Include="ImageLoader.hpp">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.hpp">
+      <Filter>源文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
