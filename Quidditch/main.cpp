@@ -42,8 +42,8 @@ namespace ClothSimulation{
 
 		inline Vertex3D& getCurrentPosition()	{ return currentPosition; }
 		void resetAcceleration()	{ acceleration = Vertex3D(0, 0, 0); }
-		void offsetPosition(const Vertex3D v)	{ if (!fixed) currentPosition += v; }
-		void setPosition(const Vertex3D v)	{ currentPosition = previousPosition = v; }
+		void offsetPosition(const Vertex3D& v)	{ if (!fixed) currentPosition += v; }
+		void setPosition(const Vertex3D& v)	{ currentPosition = previousPosition = v; }
 		void setFixed()	{ fixed = true; }
 		void setNormal(Vertex3D norm)	{ normal = norm; }
 		inline Vertex3D& getNormal()	{ return normal; }
@@ -181,7 +181,7 @@ namespace ClothSimulation{
 			for (int x = 0; x < width_granularity; x++)
 				for (int y = 0; y < height_granularity; y++){
 					// ÔÚYOZÆ½ÃæÉÏ£¬YÖáÕý·½Ïò£¬zÖá¸º·½Ïò
-					Vertex3D pos(height * (y / (float)height_granularity), height * (y / (float)height_granularity), -width * (x / (float)width_granularity));
+					Vertex3D pos(0, height * (y / (float)height_granularity), -width * (x / (float)width_granularity));
 					
 					particles[y * width_granularity + x] = Particle(pos, PARTICLE_MASS);
 					if (x == 0)
@@ -317,11 +317,81 @@ namespace ClothSimulation{
 				}
 			}
 		}
+
+		void rotateX(float angle){
+			Particle *st = getParticle(0, 0);
+			Particle *ed = getParticle(0, 1);
+
+			angle = angle * 2 * PI / 360;
+			
+			float real = cosf(angle), complex = sinf(angle);
+			Vertex3D prev =  ed->getCurrentPosition() - st->getCurrentPosition();
+			Vertex3D now(prev.x * real - prev.y * complex, prev.x * complex + prev.y * real, prev.z);
+
+			for (int i = 1; i < height_granularity; i++)
+				getParticle(0, i)->setPosition(now + getParticle(0, i-1)->getCurrentPosition());
+		}
+		void rotateZ(float angle){
+			Particle *st = getParticle(0, 0);
+			Particle *ed = getParticle(0, 1);
+
+			angle = angle * 2 * PI / 360;
+
+			float real = cosf(angle), complex = sinf(angle);
+			Vertex3D prev = ed->getCurrentPosition() - st->getCurrentPosition();
+			Vertex3D now(prev.x, prev.z * complex + prev.y * real, prev.z * real - prev.y * complex);
+
+			for (int i = 1; i < height_granularity; i++)
+				getParticle(0, i)->setPosition(now + getParticle(0, i - 1)->getCurrentPosition());
+		}
 	};
 }
 
+Vertex3D wind;
 ClothSimulation::Cloth banner0(16, 9, 16, 9, TEX_BANNER0, PIXMAP_BANNER0);
 ClothSimulation::Cloth banner1(16, 9, 16, 9, TEX_BANNER1, PIXMAP_BANNER1);
+
+// 键盘事件响应
+void pressSpecialKey(int key, int x, int y){
+	switch (key){
+	case GLUT_KEY_UP:
+		banner0.rotateX(2);
+		banner1.rotateX(2);
+		break;
+	case GLUT_KEY_DOWN:
+		banner0.rotateX(-2);
+		banner1.rotateX(-2);
+		break;
+	case GLUT_KEY_LEFT:
+		banner0.rotateZ(-2);
+		banner1.rotateZ(-2);
+		break;
+	case GLUT_KEY_RIGHT:
+		banner0.rotateZ(2);
+		banner1.rotateZ(2);
+		break;
+	}
+}
+
+void pressNormalKey(unsigned char key, int x, int y){
+	printf("Key: %d\n", key);
+	switch (key){
+	case 'a':
+		wind = Vertex3D(wind.x * cosf(0.05) - wind.z * sinf(0.05) , wind.y, wind.z * cosf(0.05) + wind.x * sinf(0.05));
+		break;
+	case 'd':
+		wind = Vertex3D(wind.x * cosf(0.05) + wind.z * sinf(0.05), wind.y, wind.z * cosf(0.05) - wind.x * sinf(0.05));
+		break;
+	case'w':
+		if (wind.length() < 7)
+			wind *= 1.1;
+		break;
+	case 's':
+		if (wind.length() > 0.05)
+			wind *= 0.9;
+		break;
+	}
+}
 
 void init(){
 	glClearColor(1, 1, 1, 0);
@@ -330,6 +400,8 @@ void init(){
 	glDepthFunc(GL_LEQUAL);
 	
 	glEnable(GL_COLOR_MATERIAL);
+	glutKeyboardFunc(pressNormalKey);
+	glutSpecialFunc(pressSpecialKey);
 	/*
 	glEnable(GL_LIGHT0);
 	GLfloat lightPos[4] = { 1.0, 0.0, 0.0, 0.0 };
@@ -337,7 +409,10 @@ void init(){
 	*/
 
 	Texture::prepareBanner();
+
+	wind.x = -1; wind.y = 0; wind.z = -2;
 }
+
 
 void display(){
 	//printf("display\n");
@@ -351,55 +426,33 @@ void display(){
 	gluLookAt(18, 2, 16, 0, 3, -7, 0, 1, 0);
 	//gluLookAt(7, 7, 0, 0, 0, 0, 0, 1, 0);
 	banner0.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
-	banner0.windForce(Vertex3D(-1.0, 0, -2.0) * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
+	banner0.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
 	banner0.stepMove();
 
 	banner1.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
-	banner1.windForce(Vertex3D(-1.0, 0, -2.0) * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
+	banner1.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
 	banner1.stepMove();
 
-	/*
-	glDisable(GL_LIGHTING); // drawing some smooth shaded background - because I like it ;)
-	glBegin(GL_POLYGON);
-	glColor3f(0.8f, 0.8f, 1.0f);
-	glVertex3f(-200.0f, -100.0f, -100.0f);
-	glVertex3f(200.0f, -100.0f, -100.0f);
-	glColor3f(0.4f, 0.4f, 0.8f);
-	glVertex3f(200.0f, 100.0f, -100.0f);
-	glVertex3f(-200.0f, 100.0f, -100.0f);
-	glEnd();
-	glEnable(GL_LIGHTING);
-	*/
-
-	/*
-
-	for (int i = -4; i <= 4; i++)
-	for (int j = 0; j >= -15; j--){
-	// 0, i, j
-	glPushMatrix();
-	glTranslated(0, i, j);
-
-	glutSolidSphere(0.1, 30, 30);
-	glPopMatrix();
-	}
-	*/
 	glColor3f(0, 1, 0);
-	//banner0.drawBallVersion();
-	//banner0.drawTriangleVersion();
 
-	//banner0.drawNurbsVersion();
+	glPushMatrix();
+	glTranslatef(-2, -2, 2);
 
 	glPushMatrix();
 	glTranslatef(-2, 0, 2);
 	glRotatef(10, 0, -1, 0);
+	//banner1.drawBallVersion();
+	//banner1.drawTriangleVersion
 	banner1.drawNurbsVersion();
 	glPopMatrix();
 
 	glPushMatrix();
 	glTranslatef(4.5, 0, -4.5);
-	glRotatef(30, 0, -1, 0);
+	//banner0.drawBallVersion();
 	banner0.drawTriangleVersion();
-	//banner1.drawTriangleVersion();
+	//banner0.drawNurbsVersion();
+	glPopMatrix();
+
 	glPopMatrix();
 	
 	glutSwapBuffers();

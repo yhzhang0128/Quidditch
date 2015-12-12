@@ -3,6 +3,7 @@
 
 #include <cmath>
 
+#define PI 3.1415926535898
 #define NEAR_ZERO_ESP 0.0000001
 
 struct Vertex3D{
