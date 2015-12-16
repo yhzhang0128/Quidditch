@@ -482,7 +482,7 @@ void display(){
 	//banner0.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
 	//banner0.stepMove();
 
-	banner1.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
+	banner1.addForce(Vertex3D(0, -0.7, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
 	if (banner_mode == 1)
 		banner1.windForce(wind * ClothSimulation::STEP_TIMESQUARE * 0.6); // generate some wind each frame
 	else
