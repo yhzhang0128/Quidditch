@@ -268,8 +268,8 @@ namespace Quidditch{
 	}
 
 	void moveMouse(int x, int y){
-		if (!detectMouse)
-			return;
+		//if (!detectMouse)
+			//return;
 
 		static int prevx, prevy;
 		if (prevx == 0 && prevy == 0){
