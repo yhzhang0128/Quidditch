@@ -6,6 +6,7 @@
 #include "Texture.hpp"
 
 namespace ClothSimulation{
+	Vertex3D wind;
 
 	const float STEP_TIMESQUARE = 0.35 * 0.35;
 	const float DAMPING = 0.01;
@@ -73,9 +74,10 @@ namespace ClothSimulation{
 		}
 	};
 
-	class Cloth{
+	class Banner{
 	private:
 		int pixmap_id, texture_id;
+		float draw_width, draw_height;
 		int width_granularity, height_granularity;
 		std::vector<Particle> particles;
 		std::vector<Constraint> constraints;
@@ -101,7 +103,7 @@ namespace ClothSimulation{
 
 		void drawTriangle(Particle *p1, Particle *p2, Particle *p3)
 		{
-			glColor3f(0.5, 0.5, 0.5);
+			glColor3f(1, 1, 1);
 
 			float relativeW = Texture::smallPixmaps[pixmap_id].relativeW;
 			float relativeH = Texture::smallPixmaps[pixmap_id].relativeH;
@@ -165,19 +167,61 @@ namespace ClothSimulation{
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, lightDiffuse1);
 
 			glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+
+			// draw pole
+			glColor3f(1, 1, 1);
+			glPushMatrix();
+			//glRotatef(90, -1, 0, 0);
+
+			Vertex3D raw(0, 0, 1);
+			Particle *st = getParticle(0, 0);
+			Particle *ed = getParticle(0, 1);
+			Vertex3D target = ed->getCurrentPosition() - st->getCurrentPosition();
+			//printf("target: %f %f %f\n", target.x, target.y, target.z);
+
+			Vertex3D rot = raw.cross(target);
+			//printf("rot: %f %f %f\n", rot.x, rot.y, rot.z);
+
+			float angle = 180 * acos(raw.dot(target) / raw.length() / target.length()) / PI;
+			//printf("angle: %f\n", angle);
+			glRotatef(angle, rot.x, rot.y, rot.z);
+
+			glEnable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, Texture::textureNames[TEX_FLOOR]);
+			glutSolidSphere(1, 20, 20);
+			GLUquadricObj *quadratic;
+			quadratic = gluNewQuadric();
+
+
+			gluQuadricNormals(quadratic, GL_SMOOTH);
+			gluQuadricTexture(quadratic, TRUE);
+			glBindTexture(GL_TEXTURE_2D, Texture::textureNames[TEX_DESK_BORDER]);
+			gluCylinder(quadratic, 0.15f, 0.15f, draw_height*1.5, 32, 32);
+			glDisable(GL_TEXTURE_2D);
+
+			glPopMatrix();
+
+			// Texture is modulate so that color should be white
+			
+			glPushMatrix();
+			target *= draw_height * 0.5;
+			glTranslatef(target.x, target.y, target.z);
 		}
 
 		void renderEnd(){
+			glPopMatrix();
+
 			glDisable(GL_LIGHT1);
 			glDisable(GL_LIGHTING);
 		}
 	public:
-		Cloth(float	width, float height, int width_gran, int height_gran, int texture, int pixmap) :
+		Banner(float width, float height, int width_gran, int height_gran, int texture, int pixmap) :
 			pixmap_id(pixmap), texture_id(texture),
 			width_granularity(width_gran), height_granularity(height_gran){
 
+			draw_width = width;
+			draw_height = height;
 			particles.resize(width_granularity * height_granularity);
-			
 			for (int x = 0; x < width_granularity; x++)
 				for (int y = 0; y < height_granularity; y++){
 					// ÔÚYOZÆ½ÃæÉÏ£¬YÖáÕý·½Ïò£¬zÖá¸º·½Ïò
@@ -200,6 +244,7 @@ namespace ClothSimulation{
 
 		void drawBallVersion(){
 			renderStart();
+			glColor3f(0, 0, 1);
 			for (int i = 0; i < particles.size(); i++){
 				Vertex3D pos(particles[i].getCurrentPosition());
 
@@ -244,7 +289,6 @@ namespace ClothSimulation{
 			}
 			glEnd();
 
-
 			glDisable(GL_TEXTURE_2D);
 			renderEnd();
 		}
@@ -252,7 +296,6 @@ namespace ClothSimulation{
 
 		GLfloat *bufferNURBS;
 		void drawNurbsVersion(){
-			glColor3f(1, 1, 1);
 			for (int i = 0; i < width_granularity; i++)
 				for (int j = 0; j < height_granularity; j++){
 					bufferNURBS[(i * height_granularity + j) * 3 + 0] = getParticle(i, j)->getCurrentPosition().x;
@@ -347,28 +390,29 @@ namespace ClothSimulation{
 	};
 }
 
-Vertex3D wind;
-ClothSimulation::Cloth banner0(16, 9, 16, 9, TEX_BANNER0, PIXMAP_BANNER0);
-ClothSimulation::Cloth banner1(16, 9, 16, 9, TEX_BANNER1, PIXMAP_BANNER1);
+int banner_mode;
+using ClothSimulation::wind;
+ClothSimulation::Banner banner0(16, 9, 16, 9, TEX_BANNER0, PIXMAP_BANNER0);
+ClothSimulation::Banner banner1(16, 9, 12, 7, TEX_BANNER1, PIXMAP_BANNER1);
 
 // 键盘事件响应
 void pressSpecialKey(int key, int x, int y){
 	switch (key){
 	case GLUT_KEY_UP:
-		banner0.rotateX(2);
-		banner1.rotateX(2);
+		banner0.rotateX(1);
+		banner1.rotateX(1);
 		break;
 	case GLUT_KEY_DOWN:
-		banner0.rotateX(-2);
-		banner1.rotateX(-2);
+		banner0.rotateX(-1);
+		banner1.rotateX(-1);
 		break;
 	case GLUT_KEY_LEFT:
-		banner0.rotateZ(-2);
-		banner1.rotateZ(-2);
+		banner0.rotateZ(-1);
+		banner1.rotateZ(-1);
 		break;
 	case GLUT_KEY_RIGHT:
-		banner0.rotateZ(2);
-		banner1.rotateZ(2);
+		banner0.rotateZ(1);
+		banner1.rotateZ(1);
 		break;
 	}
 }
@@ -387,8 +431,13 @@ void pressNormalKey(unsigned char key, int x, int y){
 			wind *= 1.1;
 		break;
 	case 's':
-		if (wind.length() > 0.05)
+		if (wind.length() > 0.005)
 			wind *= 0.9;
+		break;
+	case ' ':
+		banner_mode++;
+		if (banner_mode == 3)
+			banner_mode = 0;
 		break;
 	}
 }
@@ -407,9 +456,12 @@ void init(){
 	GLfloat lightPos[4] = { 1.0, 0.0, 0.0, 0.0 };
 	glLightfv(GL_LIGHT0, GL_POSITION, (GLfloat *)&lightPos);
 	*/
-
+	Texture::prepareRoom();
+	Texture::prepareBall();
+	Texture::prepareDesk();
 	Texture::prepareBanner();
 
+	banner_mode = 0;
 	wind.x = -1; wind.y = 0; wind.z = -2;
 }
 
@@ -423,37 +475,44 @@ void display(){
 	glLoadIdentity();
 
 	gluPerspective(45.0f, (GLfloat)1280 / (GLfloat)720, 0.1f, 5000.0f);
-	gluLookAt(18, 2, 16, 0, 3, -7, 0, 1, 0);
+	gluLookAt(18, 8, 18, 0, 6, 0, 0, 1, 0);
+
 	//gluLookAt(7, 7, 0, 0, 0, 0, 0, 1, 0);
-	banner0.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
-	banner0.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
-	banner0.stepMove();
+	//banner0.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
+	//banner0.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
+	//banner0.stepMove();
 
 	banner1.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
 	banner1.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
 	banner1.stepMove();
 
-	glColor3f(0, 1, 0);
-
-	glPushMatrix();
-	glTranslatef(-2, -2, 2);
-
-	glPushMatrix();
-	glTranslatef(-2, 0, 2);
-	glRotatef(10, 0, -1, 0);
+	glColor3f(0.3, 0.3, 0.3);
+	glBegin(GL_QUADS);
+		glVertex3f(5, 0, 5);
+		glVertex3f(5, 0, -5);
+		glVertex3f(-5, 0, -5);
+		glVertex3f(-5, 0, 5);
+	glEnd();
+	//glPushMatrix();
+	//glTranslatef(-2, 0, 2);
+	//glRotatef(10, 0, -1, 0);
 	//banner1.drawBallVersion();
 	//banner1.drawTriangleVersion
-	banner1.drawNurbsVersion();
-	glPopMatrix();
+	if (banner_mode == 0)
+		banner1.drawBallVersion();
+	if (banner_mode == 1)
+		banner1.drawTriangleVersion();
+	if (banner_mode == 2)
+		banner1.drawNurbsVersion();
+	//glPopMatrix();
 
-	glPushMatrix();
-	glTranslatef(4.5, 0, -4.5);
+	//glPushMatrix();
+	//glTranslatef(4.5, 0, -4.5);
 	//banner0.drawBallVersion();
-	banner0.drawTriangleVersion();
+	//banner0.drawTriangleVersion();
 	//banner0.drawNurbsVersion();
-	glPopMatrix();
+	//glPopMatrix();
 
-	glPopMatrix();
 	
 	glutSwapBuffers();
 	glutPostRedisplay();
