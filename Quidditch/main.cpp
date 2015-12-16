@@ -186,15 +186,13 @@ namespace ClothSimulation{
 			//printf("angle: %f\n", angle);
 			glRotatef(angle, rot.x, rot.y, rot.z);
 
-			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, Texture::textureNames[TEX_FLOOR]);
-			glutSolidSphere(1, 20, 20);
 			GLUquadricObj *quadratic;
 			quadratic = gluNewQuadric();
 
 
 			gluQuadricNormals(quadratic, GL_SMOOTH);
 			gluQuadricTexture(quadratic, TRUE);
+			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, Texture::textureNames[TEX_DESK_BORDER]);
 			gluCylinder(quadratic, 0.15f, 0.15f, draw_height*1.5, 32, 32);
 			glDisable(GL_TEXTURE_2D);
@@ -390,7 +388,6 @@ namespace ClothSimulation{
 	};
 }
 
-int banner_mode;
 using ClothSimulation::wind;
 ClothSimulation::Banner banner0(16, 9, 16, 9, TEX_BANNER0, PIXMAP_BANNER0);
 ClothSimulation::Banner banner1(16, 9, 12, 7, TEX_BANNER1, PIXMAP_BANNER1);
@@ -434,11 +431,6 @@ void pressNormalKey(unsigned char key, int x, int y){
 		if (wind.length() > 0.005)
 			wind *= 0.9;
 		break;
-	case ' ':
-		banner_mode++;
-		if (banner_mode == 3)
-			banner_mode = 0;
-		break;
 	}
 }
 
@@ -461,7 +453,6 @@ void init(){
 	Texture::prepareDesk();
 	Texture::prepareBanner();
 
-	banner_mode = 0;
 	wind.x = -1; wind.y = 0; wind.z = -2;
 }
 
@@ -485,24 +476,11 @@ void display(){
 	banner1.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
 	banner1.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
 	banner1.stepMove();
-
-	glColor3f(0.3, 0.3, 0.3);
-	glBegin(GL_QUADS);
-		glVertex3f(5, 0, 5);
-		glVertex3f(5, 0, -5);
-		glVertex3f(-5, 0, -5);
-		glVertex3f(-5, 0, 5);
-	glEnd();
 	//glPushMatrix();
 	//glTranslatef(-2, 0, 2);
 	//glRotatef(10, 0, -1, 0);
 	//banner1.drawBallVersion();
 	//banner1.drawTriangleVersion
-	if (banner_mode == 0)
-		banner1.drawBallVersion();
-	if (banner_mode == 1)
-		banner1.drawTriangleVersion();
-	if (banner_mode == 2)
 		banner1.drawNurbsVersion();
 	//glPopMatrix();
 
