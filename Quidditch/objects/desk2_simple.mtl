@@ -1,0 +1,44 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# 创建的文件:25.10.2015 23:45:24
+
+newmtl _desk2_simple07___Default
+	Ns 10.000
+	Ni 1.500
+	d 1.000
+	Tr 0.000
+	Tf 1.000 1.000 1.000 
+	illum 2
+	Ka 0.590 0.590 0.590
+	Kd 0.590 0.590 0.590
+	Ks 0.000 0.000 0.000
+	Ke 0.000 0.000 0.000
+	map_Ka F:\Graphics\Project1 Matrial\20115124115781\Max\archmodels47_053_2.jpg
+	map_Kd F:\Graphics\Project1 Matrial\20115124115781\Max\archmodels47_053_2.jpg
+
+newmtl _desk2_simpleMaterial__31
+	Ns 10.000
+	Ni 1.500
+	d 1.000
+	Tr 0.000
+	Tf 1.000 1.000 1.000 
+	illum 2
+	Ka 0.590 0.590 0.590
+	Kd 0.590 0.590 0.590
+	Ks 0.000 0.000 0.000
+	Ke 0.000 0.000 0.000
+	map_Ka F:\Graphics\Project1 Matrial\20115124115781\Max\heavy.JPG
+	map_Kd F:\Graphics\Project1 Matrial\20115124115781\Max\heavy.JPG
+
+newmtl 03___Default
+	Ns 10.000
+	Ni 1.500
+	d 1.000
+	Tr 0.000
+	Tf 1.000 1.000 1.000 
+	illum 2
+	Ka 0.588 0.588 0.588
+	Kd 0.588 0.588 0.588
+	Ks 0.000 0.000 0.000
+	Ke 0.000 0.000 0.000
+	map_Ka F:\Graphics\Project1\Project1\images\target_ball.jpg
+	map_Kd F:\Graphics\Project1\Project1\images\target_ball.jpg

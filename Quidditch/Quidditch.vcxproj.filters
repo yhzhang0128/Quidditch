@@ -29,5 +29,20 @@
     <ClInclude Include="Texture.hpp">
       <Filter>源文件</Filter>
     </ClInclude>
+    <ClInclude Include="ClothSimulation.hpp">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLogic.hpp">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="QuidditchLogic.hpp">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ball.hpp">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Model3D.hpp">
+      <Filter>源文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
