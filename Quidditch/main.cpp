@@ -8,7 +8,7 @@
 namespace ClothSimulation{
 	Vertex3D wind;
 
-	const float STEP_TIMESQUARE = 0.35 * 0.35;
+	const float STEP_TIMESQUARE = 0.15 * 0.15;
 	const float DAMPING = 0.01;
 	const float PARTICLE_MASS = 2;
 	const float CONSTRAINT_ITERATIONS = 15;
@@ -393,7 +393,7 @@ namespace ClothSimulation{
 int banner_mode;
 using ClothSimulation::wind;
 ClothSimulation::Banner banner0(16, 9, 16, 9, TEX_BANNER0, PIXMAP_BANNER0);
-ClothSimulation::Banner banner1(16, 9, 12, 7, TEX_BANNER1, PIXMAP_BANNER1);
+ClothSimulation::Banner banner1(16, 9, 16, 9, TEX_BANNER1, PIXMAP_BANNER1);
 
 // 键盘事件响应
 void pressSpecialKey(int key, int x, int y){
@@ -418,7 +418,7 @@ void pressSpecialKey(int key, int x, int y){
 }
 
 void pressNormalKey(unsigned char key, int x, int y){
-	printf("Key: %d\n", key);
+	//printf("Key: %d\n", key);
 	switch (key){
 	case 'a':
 		wind = Vertex3D(wind.x * cosf(0.05) - wind.z * sinf(0.05) , wind.y, wind.z * cosf(0.05) + wind.x * sinf(0.05));
@@ -483,7 +483,10 @@ void display(){
 	//banner0.stepMove();
 
 	banner1.addForce(Vertex3D(0, -0.3, 0) * ClothSimulation::STEP_TIMESQUARE); // add gravity each frame, pointing down
-	banner1.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
+	if (banner_mode == 1)
+		banner1.windForce(wind * ClothSimulation::STEP_TIMESQUARE * 0.6); // generate some wind each frame
+	else
+		banner1.windForce(wind * ClothSimulation::STEP_TIMESQUARE); // generate some wind each frame
 	banner1.stepMove();
 
 	glColor3f(0.3, 0.3, 0.3);
@@ -512,10 +515,22 @@ void display(){
 	//banner0.drawTriangleVersion();
 	//banner0.drawNurbsVersion();
 	//glPopMatrix();
-
 	
 	glutSwapBuffers();
 	glutPostRedisplay();
+}
+
+void timer_callback(int nouse);
+void timer(){
+	// TODO
+	// 当前只有游戏逻辑，所以直接调用Quidditch::frameDisplay()
+	// 后期版本此处应为状态机
+	display();
+	//printf("HERE\n");
+	//glutTimerFunc(1000, timer_callback, 1);	
+}
+void timer_callback(int nouse){
+	timer();
 }
 
 int main(int argc, char** argv)
@@ -528,7 +543,7 @@ int main(int argc, char** argv)
 	glutCreateWindow("Quidditch with waving flag");
 
 	init();
-	glutDisplayFunc(display);
+	glutDisplayFunc(timer);
 	//	glutReshapeFunc(reshape);
 	//	glutKeyboardFunc(keyboard);
 	//	glutSpecialFunc(arrow_keys);
